@@ -34,6 +34,7 @@ var color_counter = 0;
 const msg_types = [
   'get_protocol',
   'set_center',
+  'set_zoom_range',
   'debug',
   'add_layer',
   'update_layer',
@@ -66,6 +67,7 @@ const annotation_types = {
  *   * _init_map()
  *   * _resize(size)
  *   * _set_center(x, y, z)
+ *   * _set_zoom_range(min, max)
  *   * _add_annotation_layer(name)
  *   * _add_osm_layer(name, url, vis, query)
  *   * _add_wms_layer(name, url, vis, query)
@@ -109,6 +111,15 @@ class MapObject {
       throw new constants.InvalidParams('Invalid parameters sent to set_center!');
     }
     return this._set_center(x, y, z);
+  }
+
+  /**
+   * Set the zoom range of the map.
+   * @param {number} min The min zoom level
+   * @param {number} max The max zoom level
+   */
+  set_zoom_range (min, max) {
+    return this._set_zoom_range(min, max);
   }
 
   /**

@@ -42,6 +42,7 @@ class GeonotebookLayer(object):
         self._expose_as = kwargs.pop("expose_as", None)
 
         self.vis_options = self.StyleOptions(**kwargs)
+
         self.can_subset = False
 
     def __repr__(self):

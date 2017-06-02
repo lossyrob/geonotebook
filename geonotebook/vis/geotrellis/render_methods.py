@@ -45,7 +45,6 @@ def rgba_functions(color_map):
     for key in color_map:
         m[key] = hex_to_rgb(color_map[key])
 
-
     def r(v):
         if v in m:
             return m[v][0]

@@ -28,6 +28,11 @@ class GeoJSMap extends BaseMap {
     return [x, y, z];
   }
 
+  _set_zoom_range (min, max) {
+    this.geojsmap.zoomRange({min: min, max: max});
+    return [min, max];
+  }
+
   _add_annotation_layer (name) {
     var layer = this.geojsmap.createLayer('annotation', {
       annotations: ['rectangle', 'point', 'polygon']
@@ -55,6 +60,10 @@ class GeoJSMap extends BaseMap {
     if (vis.attribution) {
       opts.attribution = vis.attribution;
     }
+    if(vis.maxZoom) {
+      opts.maxZoom = vis.maxZoom;
+    }
+
     var osm = this.geojsmap.createLayer('osm', opts);
 
     osm.name(name);
@@ -67,10 +76,13 @@ class GeoJSMap extends BaseMap {
   }
 
   _add_tiled_layer (name, url, vis, query) {
-    var layer = this.geojsmap.createLayer('osm', {
-      attribution: null,
-      keepLower: false
-    });
+    var opts = { attribution: null, keepLower: false };
+    if(vis.max_zoom) {
+      opts.maxLevel = vis.max_zoom;
+    }
+    console.log(opts.maxLevel);
+
+    var layer = this.geojsmap.createLayer('osm', opts);
     var params = '';
 
     if ($.param(query)) {
@@ -80,7 +92,7 @@ class GeoJSMap extends BaseMap {
     layer.name(name);
     layer.url((x, y, z) => `${url}/${x}/${y}/${z}.png${params}`);
 
-      // make sure zindex is explicitly set
+    // make sure zindex is explicitly set
     this._set_layer_zindex(layer, vis['zIndex']);
 
     return layer;
@@ -89,10 +101,12 @@ class GeoJSMap extends BaseMap {
   _add_wms_layer (name, url, vis, query) {
     var projection = query['projection'] || 'EPSG:3857';
 
-    var wms = this.geojsmap.createLayer('osm', {
-      keepLower: false,
-      attribution: null
-    });
+    var opts = { attribution: null, keepLower: false };
+    if(vis.maxZoom) {
+      opts.maxZoom = vis.maxZoom;
+    }
+
+    var wms = this.geojsmap.createLayer('osm', opts);
 
       // make sure zindex is explicitly set
     this._set_layer_zindex(wms, vis['zIndex']);

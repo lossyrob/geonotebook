@@ -1,5 +1,6 @@
-import io
+import io, os
 import logging
+import math
 import numpy as np
 import os
 import rasterio
@@ -41,6 +42,8 @@ def make_tile_server(port, fn):
     that takes z, x, y as the tile route.
     '''
     app = Flask(__name__)
+    app.logger.disabled = True
+    logging.getLogger('werkzeug').disabled = True
     http_server = WSGIServer(('', port), app)
 
     f = open(os.devnull, "w")
@@ -87,53 +90,68 @@ def rdd_server(port, pyramid, render_tile):
 
     return make_tile_server(port, tile)
 
-def catalog_layer_server(port, value_reader, layer_name, key_type, tile_type, avroregistry, render_tile):
+def catalog_layer_server(port,
+                         value_reader,
+                         layer_names,
+                         is_multi_layer,
+                         key_type,
+                         tile_type,
+                         avroregistry,
+                         max_zoom,
+                         render_tile):
     from geopyspark.avroserializer import AvroSerializer
 
-    def tile(z, x, y):
-        tile = value_reader.readTile(key_type,
-                                     layer_name,
-                                     z,
-                                     x,
-                                     y,
-                                     "")
-        if not tile:
-            abort(404)
-
-        decoder = avroregistry._get_decoder(tile_type)
-        encoder = avroregistry._get_encoder(tile_type)
-
-        ser = AvroSerializer(tile._2(), decoder, encoder)
-        arr = ser.loads(tile._1())[0]['data']
-        image = render_tile(arr)
-
-        return respond_with_image(image)
-
-    return make_tile_server(port, tile)
-
-def catalog_multilayer_server(port, value_reader, layer_names, key_type, tile_type, avroregistry, render_tile):
-    from geopyspark.avroserializer import AvroSerializer
+    decoder = avroregistry._get_decoder(tile_type)
+    encoder = avroregistry._get_encoder(tile_type)
 
     def tile(z, x, y):
+        if z > max_zoom:
+            overzoom = True
+            dz = z - max_zoom
+            tz = max_zoom
+            tx = math.floor(x / math.pow(2, dz))
+            ty = math.floor(y / math.pow(2, dz))
+        else:
+            overzoom = False
+            tz = z
+            tx = x
+            ty = y
+
         tiles = []
-        decoder = avroregistry._get_decoder(tile_type)
-        encoder = avroregistry._get_encoder(tile_type)
-
         for layer_name in layer_names:
             value = value_reader.readTile(key_type,
                                           layer_name,
-                                          z,
-                                          x,
-                                          y,
+                                          tz,
+                                          tx,
+                                          ty,
                                           "")
             if not value:
                 abort(404)
 
             ser = AvroSerializer(value._2(), decoder, encoder)
             tile = ser.loads(value._1())[0]['data']
+
             tiles.append(tile)
 
-        image = render_tile(tiles)
+        if is_multi_layer:
+            image = render_tile(tiles)
+        else:
+            image = render_tile(tiles[0])
+
+        if overzoom:
+            # Figure out image crop bounds
+            dz = z - max_zoom
+            dx = x - tx * math.pow(2, dz)
+            dy = y - ty * math.pow(2, dz)
+
+            (w, h) = image.size
+
+            tw = int(w / dz)
+            th = int(h / dz)
+            (x0, x1) = (tw * dx, tw * (dx + 1))
+            (y0, y1) = (th * dy, th * (dy + 1))
+            image = image.crop(x0, y0, x1, y1)
+            image = image.resample((256,256))
 
         return respond_with_image(image)
 

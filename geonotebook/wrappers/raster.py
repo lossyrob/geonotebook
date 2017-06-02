@@ -29,11 +29,14 @@ class GeoTrellisCatalogLayerData(object):
     def __init__(self,
                  geopysc,
                  catalog_uri,
-                 layer_name,
+                 layer_names,
                  key_type = None,
                  tile_type = None,
-                 options = None,):
-        from geopyspark.geotrellis.catalog import _construct_catalog, _mapped_cached
+                 options = None,
+                 name = None):
+        from geopyspark.geotrellis.catalog import (_construct_catalog,
+                                                   _mapped_cached,
+                                                   get_layer_ids)
         from geopyspark.geotrellis.constants import SPATIAL, TILE
 
         if not key_type:
@@ -44,10 +47,36 @@ class GeoTrellisCatalogLayerData(object):
         catalog = _mapped_cached[catalog_uri]
         self.catalog_uri = catalog_uri
         self.value_reader = catalog.value_reader
-        self.layer_name = layer_name
         self.key_type =  geopysc.map_key_input(key_type, True)
         self.tile_type = tile_type
         self.avroregistry = geopysc.avroregistry
+
+        self.is_multi_layer = not isinstance(layer_names, str)
+        if not self.is_multi_layer:
+            self.layer_names = [layer_names]
+        else:
+            self.layer_names = layer_names
+
+        # Get the max zoom
+        layer_ids = list(get_layer_ids(geopysc, catalog_uri))
+        zooms = { }
+        for lid in layer_ids:
+            ln = lid['name']
+            if ln in self.layer_names:
+                if not ln in zooms:
+                    zooms[ln] = []
+                zooms[ln].append(int(lid['zoom']))
+
+        self.layer_zoom_ranges = {}
+        for ln in zooms:
+            self.layer_zoom_ranges[ln] = (min(zooms[ln]), max(zooms[ln]))
+        self.max_zoom = min(map(lambda x: x[1], self.layer_zoom_ranges.values()))
+
+        if not name:
+            self.name = ','.join(self.layer_names)
+        else:
+            self.name = name
+
 
 class RasterData(collections.Sequence):
     _default_schema = 'file'

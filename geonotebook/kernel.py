@@ -184,7 +184,7 @@ class Remote(object):
 
 
 class Geonotebook(object):
-    msg_types = ['get_protocol', 'set_center', 'add_annotation_from_client',
+    msg_types = ['get_protocol', 'set_center', 'set_zoom_range', 'add_annotation_from_client',
                  'get_map_state']
 
     _protocol = None
@@ -370,6 +370,21 @@ class Geonotebook(object):
         return self._remote.set_center(x, y, z)\
             .then(_set_center, self.rpc_error).catch(self.callback_error)
 
+    def set_zoom_range(self, min, max):
+        """Set the center of the map.
+
+        :param zoom:
+        :returns:
+        :rtype:
+
+        """
+        def _set_zoom_range(result):
+            self.min_zoom = result[0]
+            self.max_zoom = result[1]
+
+        return self._remote.set_zoom_range(min, max)\
+            .then(_set_zoom_range, self.rpc_error).catch(self.callback_error)
+
     def get_map_state(self):
         """Get the state of the map.
 
@@ -403,7 +418,7 @@ class Geonotebook(object):
 
         # HACK:  figure out a way to do this without so many conditionals
         if isinstance(data, RddRasterData):
-            name = data.name
+            name = data.name if name is None else name
 
             layer = InProcessTileLayer(name,
                                        self._remote,
@@ -413,7 +428,7 @@ class Geonotebook(object):
                                        **kwargs)
 
         elif isinstance(data, GeoTrellisCatalogLayerData):
-            name = "%s__%s" % (hash(data.catalog_uri), data.layer_name)
+            name = data.name if name is None else name
 
             layer = InProcessTileLayer(name,
                                        self._remote,

@@ -57,7 +57,7 @@ def discrete_colors(colormap, count):
 class RasterStyleOptions(object):
     def __init__(self, opacity=1.0, gamma=1.0, projection='EPSG:3857',
                  kernel_id=None, zIndex=None, colormap=None, interval=None,
-                 layer_type=None, attribution=None, **kwargs):
+                 max_zoom=18, layer_type=None, attribution=None, **kwargs):
 
         # self.vis_url = vis_url
         self.opacity = opacity
@@ -65,6 +65,7 @@ class RasterStyleOptions(object):
         self.gamma = gamma
         self.interval = interval
         self.colormap = None
+        self.max_zoom = max_zoom
         self.zIndex = zIndex
         self.kernel_id = kernel_id
         self.layer_type = layer_type
@@ -112,7 +113,8 @@ class RasterStyleOptions(object):
             'colormap': self.colormap,
             'kernel_id': self.kernel_id,
             'zIndex': self.zIndex,
-            'attribution': self.attribution
+            'attribution': self.attribution,
+            'max_zoom': self.max_zoom
         }
 
     def __hash__(self):
@@ -125,7 +127,8 @@ class RasterStyleOptions(object):
             tuple(tuple(c.items()) for c in self.colormap),
             self.kernel_id,
             self.zIndex,
-            self.attribution))
+            self.attribution.
+            self.max_zoom))
 
 
 class VectorStyleOptions(object):
